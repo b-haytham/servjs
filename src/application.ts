@@ -1,7 +1,9 @@
 import { createServer, IncomingMessage, Server, ServerResponse } from 'http';
 import { pathToRegexp, match } from 'path-to-regexp';
+import { defaultErrorHandler, DEFAULT_ROUTE_METHODS } from './common';
 import { Request } from './request';
 import { Response } from './response';
+import { RequestMethods, Route, Router } from './router';
 import { log } from './utils';
 
 export type ApplicationOptions = Record<string, any>;
@@ -19,21 +21,6 @@ export type ErrorHandler = (
   error: Error,
   ctx: HttpContext,
 ) => void | Promise<void>;
-
-type RequestMethods = 'GET' | 'POST' | 'PATCH' | 'PUT' | 'HEAD';
-
-export type Route = {
-  path: string;
-  regex: RegExp;
-  methods: {
-    GET: RequestHandler[];
-    POST: RequestHandler[];
-    PATCH: RequestHandler[];
-    PUT: RequestHandler[];
-    HEAD: RequestHandler[];
-    ALL: RequestHandler[];
-  };
-};
 
 export class Application {
   private httpServer?: Server;
@@ -145,6 +132,20 @@ export class Application {
     return this;
   }
 
+  router(router: Router) {
+    const routerRoutes = router.routes();
+    routerRoutes.forEach(r => {
+      const existingRoute = this.routes.find(route => route.path == r.path);
+      if (existingRoute) {
+        existingRoute.methods = r.methods;
+      } else {
+        this.routes.push(r);
+      }
+    });
+
+    return this;
+  }
+
   error(handler: ErrorHandler) {
     this.errorHandler = handler;
   }
@@ -172,11 +173,8 @@ export class Application {
 
     const route = this.routes.find(r => {
       const match = request.pathname ? r.regex.exec(request.pathname) : null;
-      console.log(match);
       return match;
     });
-
-    console.log(route);
 
     if (!route) {
       res.statusCode = 404;
@@ -194,7 +192,6 @@ export class Application {
     const fn = match(route.path, { decode: decodeURIComponent });
     // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
     const result = fn(request.pathname!) as Record<string, any>;
-    console.log('Result :: ', result.params);
 
     request.params = result.params;
     context.params = result.params;
@@ -218,17 +215,3 @@ export class Application {
     this.httpServer.listen(port, cb);
   }
 }
-
-const DEFAULT_ROUTE_METHODS: Route['methods'] = {
-  GET: [],
-  PATCH: [],
-  POST: [],
-  ALL: [],
-  HEAD: [],
-  PUT: [],
-};
-
-const defaultErrorHandler = (err: Error, ctx: HttpContext) => {
-  log.error('Error ', err.message);
-  ctx.res.status(500).send('Server Error');
-};
