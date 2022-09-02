@@ -1,4 +1,5 @@
 import { createServer, IncomingMessage, Server, ServerResponse } from 'http';
+import { Request } from './request';
 
 export type ApplicationOptions = Record<string, any>;
 
@@ -11,7 +12,12 @@ export class Application {
   }
 
   private handleServerRequest(req: IncomingMessage, res: ServerResponse) {
-    console.log(req.url);
+    const request = new Request(req);
+
+    console.log(request.headers);
+    console.log(request.pathname);
+    console.log(request.query);
+    console.log(request.data);
     res.statusCode = 200;
     res.end(req.url);
   }
