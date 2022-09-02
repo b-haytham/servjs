@@ -1,37 +1,24 @@
-import { ServerResponse } from 'http';
 import { Application } from '../src';
-import { Request } from '../src/request';
+import { HttpContext } from '../src/application';
 import { log } from '../src/utils';
 
-// const firstHandler = (req: Request, res: ServerResponse) => {
-//   log.log('First Handler data: ', JSON.stringify(req.data));
-//
-//   req.data.name = 'haytham';
-// };
-//
-// const secondHandler = (req: Request, res: ServerResponse) => {
-//   log.log('Second Handler data: ', JSON.stringify(req.data));
-//   res.statusCode = 200;
-//   res.end(JSON.stringify(req.data));
-// };
-
-const bodyMiddleware = async (req: Request, res: ServerResponse) => {
-  const raw = await req.getRawBody();
-  req.body = raw;
+const bodyMiddleware = async (ctx: HttpContext) => {
+  const raw = await ctx.req.getRawBody();
+  ctx.req.body = raw;
 };
 
 const app = new Application();
 
 // app.use(firstHandler, secondHandler);
 
-app.get('/', (req, res) => {
-  res.end(JSON.stringify(req.data));
+app.get('/', ctx => {
+  ctx.res.status(200).send(JSON.stringify(ctx.req.data));
 });
 
-app.post('/:name', bodyMiddleware, async (req, res) => {
-  console.log(req.body);
-  log.log('POST ', req.params.name);
-  res.end(JSON.stringify(req.params.name));
+app.post('/:name', bodyMiddleware, async ctx => {
+  console.log(ctx.req.body);
+  log.log('POST ', ctx.req.params.name);
+  ctx.res.status(201).send(JSON.stringify(ctx.req.params.name));
 });
 
 app.listen(3000, () => {
