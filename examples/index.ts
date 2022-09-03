@@ -14,6 +14,8 @@ const bodyMiddleware = async (ctx: HttpContext) => {
   ctx.req.body = body;
 };
 
+app.state({ data: 'any' });
+
 app.router(router);
 
 app.get('/', ctx => {
@@ -31,12 +33,18 @@ app.ws({
     onConnect(ctx) {
       log.trace('State: ', JSON.stringify(ctx.state));
       ctx.state.messages = [];
+      ctx.server.clients.forEach(c => c.send('NEW CLIENT'));
     },
 
     onMessage(ctx, msg) {
-      console.log('MSG DATA >>>>>>>>', msg.data);
       (ctx.state.messages as any[]).push(msg.data);
+      ctx.socket?.send('Hello');
     },
+
+    onError(ctx, err) {
+      console.log(err);
+    },
+
     onClose(ctx) {
       console.log(ctx.state.messages);
     },

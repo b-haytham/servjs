@@ -37,7 +37,7 @@ export class Application {
 
   private options: ApplicationOptions = {};
 
-  private state: Record<string, any> = {};
+  private _state: Record<string, any> = {};
 
   private homeHandlers: RequestHandler[] = [];
   private errorHandler: ErrorHandler = defaultErrorHandler;
@@ -46,6 +46,11 @@ export class Application {
 
   constructor(options?: ApplicationOptions) {
     if (options) this.options = options;
+  }
+
+  state<T extends Record<string, any>>(data: T) {
+    this._state = data;
+    return this;
   }
 
   use(...handlers: RequestHandler[]) {
@@ -168,7 +173,7 @@ export class Application {
     const context = {
       req: request,
       res: response,
-      state: this.state,
+      state: this._state,
       query: {},
       params: {},
     };
@@ -229,30 +234,33 @@ export class Application {
     );
 
     if (this.wsConfig) {
-      this._ws = new WebSocketServer({ server: this.httpServer });
+      this._ws = new WebSocketServer({
+        ...this.wsConfig.options,
+        server: this.httpServer,
+      });
       this._ws.on('connection', socket => {
-        handleOnConnect(this._ws!, socket, this.wsConfig!, this.state);
+        handleOnConnect(this._ws!, socket, this.wsConfig!, this._state);
 
         socket.on('close', () =>
-          handleOnClose(this._ws!, socket, this.wsConfig!, this.state),
+          handleOnClose(this._ws!, socket, this.wsConfig!, this._state),
         );
 
         socket.on('error', err => {
-          handleOnError(this._ws!, socket, this.wsConfig!, this.state, err);
+          handleOnError(this._ws!, socket, this.wsConfig!, this._state, err);
         });
 
         socket.on('message', (data, isBin) => {
-          handleOnMessage(this._ws!, socket, this.wsConfig!, this.state, {
+          handleOnMessage(this._ws!, socket, this.wsConfig!, this._state, {
             data,
             isBin,
           });
         });
       });
       this._ws.on('error', err => {
-        handleOnError(this._ws!, undefined, this.wsConfig!, this.state, err);
+        handleOnError(this._ws!, undefined, this.wsConfig!, this._state, err);
       });
       this._ws.on('close', () => {
-        handleOnClose(this._ws!, undefined, this.wsConfig!, this.state);
+        handleOnClose(this._ws!, undefined, this.wsConfig!, this._state);
       });
     }
 
