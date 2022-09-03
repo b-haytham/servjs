@@ -1,10 +1,18 @@
 import { createServer, IncomingMessage, Server, ServerResponse } from 'http';
 import { pathToRegexp, match } from 'path-to-regexp';
+import WebSocket, { WebSocketServer } from 'ws';
 import { defaultErrorHandler, DEFAULT_ROUTE_METHODS } from './common';
 import { Request } from './request';
 import { Response } from './response';
 import { RequestMethods, Route, Router } from './router';
 import { log } from './utils';
+import {
+  handleOnClose,
+  handleOnConnect,
+  handleOnError,
+  handleOnMessage,
+  WsConfig,
+} from './ws';
 
 export type ApplicationOptions = Record<string, any>;
 
@@ -24,6 +32,9 @@ export type ErrorHandler = (
 
 export class Application {
   private httpServer?: Server;
+  private wsConfig?: WsConfig;
+  private _ws?: WebSocket.Server;
+
   private options: ApplicationOptions = {};
 
   private state: Record<string, any> = {};
@@ -207,11 +218,44 @@ export class Application {
     }
   }
 
+  ws(config: WsConfig) {
+    this.wsConfig = config;
+  }
+
   listen(port: number, cb: () => void) {
-    this.routes.forEach(r => log.trace('Route: ', `${r.path} | ${r.regex}`));
+    this.routes.forEach(r => log.trace('Route: ', `${r.path}`));
     this.httpServer = createServer((req, res) =>
       this.handleServerRequest(req, res),
     );
+
+    if (this.wsConfig) {
+      this._ws = new WebSocketServer({ server: this.httpServer });
+      this._ws.on('connection', socket => {
+        handleOnConnect(this._ws!, socket, this.wsConfig!, this.state);
+
+        socket.on('close', () =>
+          handleOnClose(this._ws!, socket, this.wsConfig!, this.state),
+        );
+
+        socket.on('error', err => {
+          handleOnError(this._ws!, socket, this.wsConfig!, this.state, err);
+        });
+
+        socket.on('message', (data, isBin) => {
+          handleOnMessage(this._ws!, socket, this.wsConfig!, this.state, {
+            data,
+            isBin,
+          });
+        });
+      });
+      this._ws.on('error', err => {
+        handleOnError(this._ws!, undefined, this.wsConfig!, this.state, err);
+      });
+      this._ws.on('close', () => {
+        handleOnClose(this._ws!, undefined, this.wsConfig!, this.state);
+      });
+    }
+
     this.httpServer.listen(port, cb);
   }
 }

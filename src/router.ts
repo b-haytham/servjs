@@ -27,7 +27,6 @@ export class Router {
 
   get(path: string, ...handlers: RequestHandler[]) {
     const fullPath = normalizePath(this.prefix, path);
-    console.log('FULL PATH ', fullPath);
     const route = this._routes.find(r => r.path === fullPath);
     if (!route) {
       this._routes.push({

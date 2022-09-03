@@ -3,42 +3,46 @@ import { HttpContext } from '../src/application';
 import { Router } from '../src/router';
 import { log } from '../src/utils';
 
-const bodyMiddleware = async (ctx: HttpContext) => {
-  const raw = await ctx.req.getRawBody();
-  ctx.req.body = raw;
-};
-
-const userRouter = new Router('/user');
-
-userRouter
-  .get('/', ctx => {
-    ctx.res.send('Get /user');
-  })
-  .post('/', ctx => {
-    ctx.res.send('Post /user');
-  })
-  .get('/:id', ctx => {
-    ctx.res.send(`Get /user/${ctx.params.id}`);
-  });
-
 const app = new Application();
 
-app.router(userRouter);
+const router = new Router('/user').get('/:id', ctx => {
+  ctx.res.send(ctx.params.id);
+});
+
+const bodyMiddleware = async (ctx: HttpContext) => {
+  const body = await ctx.req.getRawBody();
+  ctx.req.body = body;
+};
+
+app.router(router);
 
 app.get('/', ctx => {
-  ctx.res.status(200).send(JSON.stringify(ctx.req.data));
+  ctx.res.status(200).send('Hello');
 });
 
-app.post('/:name', bodyMiddleware, async ctx => {
+app.post('/', bodyMiddleware, ctx => {
   console.log(ctx.req.body);
-  log.log('POST ', ctx.req.params.name);
-  ctx.res.status(201).send(JSON.stringify(ctx.req.params.name));
+  ctx.res.status(200).send(ctx.req.body.toString());
 });
 
-app.error((err, ctx) => {
-  ctx.res.status(503).send(err.message);
+app.ws({
+  options: { path: '/websocket' },
+  handlers: {
+    onConnect(ctx) {
+      log.trace('State: ', JSON.stringify(ctx.state));
+      ctx.state.messages = [];
+    },
+
+    onMessage(ctx, msg) {
+      console.log('MSG DATA >>>>>>>>', msg.data);
+      (ctx.state.messages as any[]).push(msg.data);
+    },
+    onClose(ctx) {
+      console.log(ctx.state.messages);
+    },
+  },
 });
 
 app.listen(3000, () => {
-  log.log('Server Listening on port :3000');
+  log.log('Listening 3000');
 });
