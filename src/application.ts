@@ -211,6 +211,7 @@ export class Application {
 
     request.params = result.params;
     context.params = result.params;
+    context.query = request.query;
 
     const handlers = route.methods[request.method as RequestMethods];
     for (const handler of handlers) {
