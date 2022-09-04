@@ -2,14 +2,17 @@
   "name": "servjs",
   "version": "0.1.0",
   "description": "Simple http framework for buiding servers",
-  "main": "src/index.ts",
+  "main": "dist/src/index.js",
+  "files": ["dist", "src"],
   "scripts": {
     "dev": "nodemon examples/index.ts",
+    "build": "tsc",
+    "start": "node dist/examples/index.js",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix"
   },
   "keywords": [],
-  "author": "haytham boussarsar <boussarsarhaytham@gmail.com>",
+  "author": "haytham boussarsar",
   "license": "MIT",
   "devDependencies": {
     "@types/content-type": "^1.1.5",
