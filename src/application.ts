@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-non-null-assertion */
 import { createServer, IncomingMessage, Server, ServerResponse } from 'http';
 import { pathToRegexp, match } from 'path-to-regexp';
 import WebSocket, { WebSocketServer } from 'ws';
